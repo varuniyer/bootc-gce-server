@@ -40,11 +40,11 @@ gcloud scheduler jobs describe "$build_job" --location="$REGION" >/dev/null 2>&1
 }
 
 read_secret 'Tailscale OAuth client secret' TS_OAUTH_SECRET
-read_secret 'PostgreSQL experiments password' POSTGRESQL_PASSWORD
+read_secret 'PostgreSQL experiments password' POSTGRESQL_EXPERIMENTS_PASSWORD
 read_secret "WebDAV password for $WEBDAV_USERNAME" WEBDAV_PASSWORD
 
 # --network=none confines each plaintext secret to the container that handles it.
-postgresql_experiments_hash=$(printf '%s' "$POSTGRESQL_PASSWORD" | podman run --rm -i --log-driver=none --network=none --tmpfs /tmp --user postgres -v "$PWD/hash-postgresql-password:/hash-postgresql-password:Z,ro" \
+postgresql_experiments_hash=$(printf '%s' "$POSTGRESQL_EXPERIMENTS_PASSWORD" | podman run --rm -i --log-driver=none --network=none --tmpfs /tmp --user postgres -v "$PWD/hash-postgresql-password:/hash-postgresql-password:Z,ro" \
     docker.io/library/postgres:17-alpine /bin/sh /hash-postgresql-password/run.sh)
 webdav_htpasswd=$(printf '%s' "$WEBDAV_PASSWORD" | podman run --rm -i --log-driver=none --network=none \
     docker.io/library/httpd:alpine htpasswd -niB "$WEBDAV_USERNAME")
@@ -53,7 +53,7 @@ webdav_htpasswd=$(printf '%s' "$WEBDAV_PASSWORD" | podman run --rm -i --log-driv
 # main-branch runs of this repo can act as the service account, which writes the seed bucket and image.
 project=$(gcloud config get-value project)
 pool_id=github
-provider_id=bootc-setup
+provider_id=${GH_REPO#*/}
 role_id=bootcImages
 pool=projects/$(gcloud projects describe "$project" --format='value(projectNumber)')/locations/global/workloadIdentityPools/$pool_id
 service_account=bootc-ci@$project.iam.gserviceaccount.com
@@ -86,8 +86,8 @@ printf '%s' "$service_account" | gh variable set GCP_SERVICE_ACCOUNT
 
 # Actions secrets are write-only, so the public key goes in a variable that gh can read back.
 public_key_var=SIGSTORE_PUBLIC_KEY
-key_var=$(gh variable list --json name --jq ".[].name | select(. == \"$public_key_var\")")
-if [ -z "$key_var" ]; then
+listed_public_key_var=$(gh variable list --json name --jq ".[].name | select(. == \"$public_key_var\")")
+if [ -z "$listed_public_key_var" ]; then
     passphrase=$(head -c 32 /dev/urandom | base64)
     keys=$(printf '%s\n' "$passphrase" | podman run --rm -i --log-driver=none --network=none --tmpfs /tmp --entrypoint sh quay.io/skopeo/stable:latest \
         -c 'skopeo generate-sigstore-key --output-prefix /tmp/k --passphrase-file /dev/stdin >&2 && cat /tmp/k.pub /tmp/k.private')
@@ -97,8 +97,18 @@ if [ -z "$key_var" ]; then
 fi
 sigstore_public_key=$(gh variable get "$public_key_var")
 
+# CI pulls the Red Hat base image with a registry service account.
+registry_token_secret=REDHAT_REGISTRY_TOKEN
+listed_registry_token_secret=$(gh secret list --json name --jq ".[].name | select(. == \"$registry_token_secret\")")
+if [ -z "$listed_registry_token_secret" ]; then
+    read -rp 'Red Hat registry service account username: ' REDHAT_REGISTRY_USERNAME
+    read_secret 'Red Hat registry token' REDHAT_REGISTRY_TOKEN
+    printf '%s' "$REDHAT_REGISTRY_USERNAME" | gh variable set REDHAT_REGISTRY_USERNAME
+    printf '%s' "$REDHAT_REGISTRY_TOKEN" | gh secret set "$registry_token_secret"
+fi
+
 # A new key needs a signed build, and a fresh project needs its first seed image.
-[ -n "$key_var" ] && gcloud compute images describe "$SEED_IMAGE" >/dev/null 2>&1 || gh workflow run "$workflow" --ref main
+[ -n "$listed_public_key_var" ] && gcloud compute images describe "$SEED_IMAGE" >/dev/null 2>&1 || gh workflow run "$workflow" --ref main
 until gcloud compute images describe "$SEED_IMAGE" >/dev/null 2>&1; do sleep 60; done
 
 mta_sts_txt=$(curl -sSf "$MTA_STS_URL")

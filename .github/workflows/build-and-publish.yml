@@ -30,5 +30,7 @@ jobs:
         run: sudo -E PATH="$PATH" bash build-and-publish.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REDHAT_REGISTRY_USERNAME: ${{ vars.REDHAT_REGISTRY_USERNAME }}
+          REDHAT_REGISTRY_TOKEN: ${{ secrets.REDHAT_REGISTRY_TOKEN }}
           SIGSTORE_PRIVATE_KEY: ${{ secrets.SIGSTORE_PRIVATE_KEY }}
           SIGSTORE_PASSPHRASE: ${{ secrets.SIGSTORE_PASSPHRASE }}

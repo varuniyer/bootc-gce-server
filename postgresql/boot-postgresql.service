@@ -5,6 +5,6 @@ After=boot-root.service
 
 [Service]
 Type=oneshot
-Environment=PGHOST=/run/postgresql
+Environment=PATH=/usr/pgsql-17/bin:/usr/bin
 ExecStart=/opt/scripts/boot-postgresql.sh
 RemainAfterExit=yes

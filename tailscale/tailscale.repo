@@ -1,0 +1,9 @@
+[tailscale-stable]
+name=Tailscale stable
+baseurl=https://pkgs.tailscale.com/stable/rhel/10/$basearch
+enabled=1
+type=rpm
+repo_gpgcheck=1
+gpgcheck=1
+# The image ships the key, so the repo server cannot substitute its own.
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-tailscale

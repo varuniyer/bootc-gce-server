@@ -4,37 +4,41 @@ set -euo pipefail
 # Nothing logs into the VM.
 dnf remove -y openssh-server openssh-clients
 rm -rf /etc/ssh
-# avahi serves mDNS. nfs-utils, gssproxy, and rpcbind serve NFS. kmscon draws a
-# console on tty1. The image uses none of them.
-dnf remove -y avahi avahi-libs nfs-utils gssproxy rpcbind kmscon
+# nfs-utils, gssproxy, and rpcbind serve NFS. subscription-manager, insights-client, and rhc
+# register the system with Red Hat and report to it. The image uses none of them.
+dnf remove -y nfs-utils gssproxy rpcbind subscription-manager insights-client rhc
+dnf install -y tailscale postgresql17-server
+dnf clean all
+# CacheDirectory= creates /var/cache/tailscale at start. Under DynamicUser=, systemd migrates the RPM's
+# root-owned copy into /var/cache/private, a rename that fails across overlay layers.
+rmdir /var/cache/tailscale
+# PGDG's RPM ships a per-version data tree and a login profile, and pgdata.conf's data dir uses neither.
+rm -r /var/lib/pgsql/17 /var/lib/pgsql/.bash_profile
+# PGDG's RPM gives postgres a login shell.
+usermod -s /usr/sbin/nologin postgres
 # systemd-getty-generator adds a login prompt on the kernel's serial console.
 # Masking the template drops it, and the serial log stays readable.
 systemctl mask serial-getty@.service
 
-# COPY'd binaries need SELinux labels.
-restorecon -R /usr/bin /usr/lib64
-
-semodule -n -i /usr/share/selinux/packages/caddy_local.cil
+# RHEL's SELinux policy has no file contexts for Caddy's paths, so these label them for httpd_t. The boolean
+# grants httpd_t only name_connect to http_port_t, which ACME and OCSP need.
+semanage fcontext -a -t httpd_exec_t /usr/bin/caddy
+semanage fcontext -a -t httpd_config_t '/etc/caddy(/.*)?'
+semanage fcontext -a -t httpd_var_lib_t '/var/lib/caddy(/.*)?'
+semanage boolean -m --on httpd_graceful_shutdown
+# PGDG's server binaries take /usr/bin's labels, so postgres runs confined as postgresql_t.
+semanage fcontext -a -e /usr/bin /usr/pgsql-17/bin
+# COPY'd binaries and the paths above need SELinux labels.
+restorecon -R /usr/bin /usr/pgsql-17 /etc/caddy
 
 groupadd -r caddy
 useradd -r -g caddy -d /var/lib/caddy -s /usr/sbin/nologin caddy
-# A pinned uid/gid keeps /var/lib/pgsql readable across image builds. 26 matches
-# Fedora's PostgreSQL packaging.
-groupadd -r -g 26 postgres
-useradd -r -u 26 -g postgres -d /var/lib/pgsql -s /usr/sbin/nologin postgres
 
 mkdir /etc/webdav /etc/pki/containers
 
-# rpm-ostree's tmpfiles entry needs /usr/local/sbin, and /usr is read-only at boot.
-mkdir /usr/local/sbin
-
 # Rebuild initramfs so prepare-root.conf's [etc] transient takes effect.
-# /root is a symlink to /var/roothome, which rpm-ostree's tmpfiles entry creates at boot.
-# Materialize it for dracut-install, then remove it.
 KVER=$(basename /usr/lib/modules/*)
-mkdir /var/roothome
 dracut --no-hostonly --force --kver "$KVER" /usr/lib/modules/"$KVER"/initramfs.img
-rmdir /var/roothome
 
 # The base image ships group-writable files that its own RPMs declare 0644,
 # and a umask-002 checkout makes COPY'd files group-writable.
@@ -43,7 +47,7 @@ find /usr /etc /opt \( -type f -o -type d \) -perm /022 -exec chmod go-w {} +
 chown root:caddy /etc/caddy/Caddyfile
 chmod 0640 /etc/caddy/Caddyfile
 
-# boot-root.service runs as Group=pghash, so the PostgreSQL hash it writes
+# boot-root.service runs as Group=pghash, so the hash file it writes
 # belongs to pghash, and postgres reads it as a member.
 groupadd -r pghash
 usermod -aG pghash postgres

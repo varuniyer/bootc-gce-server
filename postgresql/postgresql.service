@@ -5,7 +5,8 @@ After=network.target boot-postgresql.service
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/postgres -c config_file=/etc/postgresql/postgresql.conf
+ExecStart=/usr/pgsql-17/bin/postgres -c config_file=/etc/postgresql/postgresql.conf
+KillMode=mixed
 KillSignal=SIGINT
 TimeoutStartSec=infinity
 TimeoutStopSec=120

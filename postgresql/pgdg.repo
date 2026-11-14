@@ -1,0 +1,9 @@
+[pgdg17]
+name=PostgreSQL 17 for RHEL 10 - $basearch
+baseurl=https://download.postgresql.org/pub/repos/yum/17/redhat/rhel-10-$basearch
+enabled=1
+type=rpm
+repo_gpgcheck=1
+gpgcheck=1
+# The image ships the key, so the repo server cannot substitute its own.
+gpgkey=file:///etc/pki/rpm-gpg/PGDG-RPM-GPG-KEY-AARCH64-RHEL

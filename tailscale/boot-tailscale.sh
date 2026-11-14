@@ -9,9 +9,9 @@ if [ ! -f "$marker" ]; then
     secret_file=$(mktemp)
     { /opt/scripts/fetch_metadata.sh ts-oauth-secret; printf '%s' '?ephemeral=false&preauthorized=true'; } > "$secret_file"
 
-    tailscale up --auth-key="file:$secret_file" --hostname=bootc-server --advertise-tags=tag:server \
+    tailscale up --auth-key="file:$secret_file" --hostname=bootc-gce-server --advertise-tags=tag:server \
         --accept-dns=false --accept-routes=false --ssh=false
-    rm -f "$secret_file"
+    rm "$secret_file"
     touch "$marker"
 fi
 

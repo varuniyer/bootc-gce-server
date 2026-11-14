@@ -2,7 +2,7 @@
     "default": [{"type": "reject"}],
     "transports": {
         "docker": {
-            "ghcr.io/varuniyer/bootc-setup": [
+            "ghcr.io/varuniyer/bootc-gce-server": [
                 {"type": "sigstoreSigned", "keyPath": "/etc/pki/containers/sigstore.pub"}
             ]
         },
