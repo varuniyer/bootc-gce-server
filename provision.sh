@@ -111,7 +111,8 @@ fi
 
 # A new key needs a signed build, and a fresh project needs its first seed image.
 [ -n "$listed_public_key_var" ] && gcloud compute images describe "$SEED_IMAGE" >/dev/null 2>&1 || gh workflow run "$workflow" --ref main
-until gcloud compute images describe "$SEED_IMAGE" >/dev/null 2>&1; do sleep 60; done
+# A new image exists while still PENDING, and instance creation accepts only a READY one.
+until [ "$(gcloud compute images describe "$SEED_IMAGE" --format='value(status)' 2>/dev/null)" = READY ]; do sleep 60; done
 
 mta_sts_txt=$(curl -sSf "$MTA_STS_URL")
 
