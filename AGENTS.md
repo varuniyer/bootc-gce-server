@@ -75,7 +75,3 @@ Settled during the 2026-11-10 and 2026-11-14 audit and fix passes. A later audit
 - The README's "Why bootc" names the four signed links (base image, packages, Go toolchain, published image) rather than "every link", because the site tarball and the Go module sources carry no author signature. It compares the chain only against Fedora bootc. Nix's binary cache signs its store paths, so a contrast with Nix would rest on package provenance instead, which nobody has checked.
 - "The VM" names the machine in prose, and "server" names a daemon (the WebDAV server, PostgreSQL's servers). The resource names `bootc-server` and `bootc-gce-server` keep "server".
 - postgresql.service pairs `KillSignal=SIGINT` with `KillMode=mixed`, as PGDG's unit and the PostgreSQL docs do, so only the postmaster receives the signal and runs its own fast shutdown.
-
-## Open items
-
-- postgresql_local.cil has loaded only in a UBI 10 container's policy store. Check: after the image update applies, the serial log shows postgresql.service started, with no `nnp_transition` AVC.
