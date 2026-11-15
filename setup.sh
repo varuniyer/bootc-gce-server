@@ -28,6 +28,7 @@ semanage fcontext -a -t httpd_var_lib_t '/var/lib/caddy(/.*)?'
 semanage boolean -m --on httpd_graceful_shutdown
 # PGDG's server binaries take /usr/bin's labels, so postgres runs confined as postgresql_t.
 semanage fcontext -a -e /usr/bin /usr/pgsql-17/bin
+semodule -n -i /usr/share/selinux/packages/postgresql_local.cil
 # COPY'd binaries and the paths above need SELinux labels.
 restorecon -R /usr/bin /usr/pgsql-17 /etc/caddy
 

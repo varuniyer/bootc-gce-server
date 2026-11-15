@@ -40,6 +40,7 @@ COPY containers/bootc-gce-server.yaml /etc/containers/registries.d/bootc-gce-ser
 COPY containers/sigpolicy.toml /usr/lib/bootc/install/sigpolicy.toml
 COPY postgresql/postgresql.conf postgresql/pg_hba.conf /etc/postgresql/
 COPY postgresql/bootstrap.sql /usr/share/boot-postgresql/
+COPY postgresql/postgresql_local.cil /usr/share/selinux/packages/postgresql_local.cil
 
 COPY setup.sh boot-root.sh fetch_metadata.sh tailscale/boot-tailscale.sh postgresql/boot-postgresql.sh postgresql/bootstrap.sh /opt/scripts/
 COPY boot-root.service rclone-webdav.service tailscale/boot-tailscale.service postgresql/boot-postgresql.service postgresql/postgresql.service caddy/caddy.service /usr/lib/systemd/system/

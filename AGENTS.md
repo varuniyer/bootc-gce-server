@@ -61,6 +61,7 @@ Settled during the 2026-11-10 and 2026-11-14 audit and fix passes. A later audit
 - A line that states a tool's built-in default stays, unless it repeats a value the repo sets elsewhere. A unit omits a `Group=` that would repeat its user's primary group, which setup.sh's `useradd -g` sets. tailscaled.service passes no `--socket=`, because the built-in /var/run/tailscale/tailscaled.sock, which the CLI also uses, lies in the unit's `RuntimeDirectory=tailscale`. tailscaled's `--port=${WIREGUARD_PORT}` stays, because its built-in default is 0, a random port (tailscaled 1.104.4 `--help`), and the GCP firewall and nftables need a fixed one.
 - sandbox.conf holds `IPAddressDeny=any`, and each unit that needs IP traffic adds its own `IPAddressAllow=`.
 - run-as-postgres.conf holds the `User=` and `ReadWritePaths=` both PostgreSQL units share and links in beside sandbox.conf.
+- postgresql_local.cil grants `init_t` the `nnp_transition` into `postgresql_t`, because RHEL 10's policy grants it for `httpd_t` but not `postgresql_t`, and every unit runs under sandbox.conf's `NoNewPrivileges`. semanage cannot add an allow rule, and no boolean grants this one. Permissive mode, bin_t labels, or `SELinuxContext=` would give up `postgresql_t` or fail under NNP. Scripts under /opt run as `unconfined_service_t`, which `init_t` may enter under NNP, so boot-postgresql needs no rule.
 - setup.sh's link loop keeps its own unit list beside the Containerfile COPY. Deriving the list from units no RPM owns would also sandbox the base image's bootc-generic-growpart.
 - containers/policy.json owns the image name, which carries the GitHub repository name. build-and-publish.sh reads the image name from that file, and provision.sh derives the repository name from it.
 - build.env holds the names both provision.sh and CI read, including `WEBSITE_REPO`, which CI passes to the site stage as a build ARG. pgdg.repo's PostgreSQL 17 and provision.sh's postgres:17-alpine stay independent of it, since SCRAM-SHA-256 password hashes share one format from PostgreSQL 10 on.
@@ -77,5 +78,4 @@ Settled during the 2026-11-10 and 2026-11-14 audit and fix passes. A later audit
 
 ## Open items
 
-- A PostgreSQL bootstrap under sandbox.conf's `IPAddressDeny=any` has run only in containers. Check: the next fresh bootstrap, which runs only on reprovisioning, succeeds with boot-postgresql under `IPAddressDeny=any` and no `IPAddressAllow=`.
-- Until the next reprovisioning, the deployed instance and its tailnet node keep the name `bootc`, so the commands that name `bootc-server` or `bootc-gce-server` reach nothing. Check: after reprovisioning, `gcloud compute instances describe bootc-server` succeeds and the node appears as bootc-gce-server in the tailnet.
+- postgresql_local.cil has loaded only in a UBI 10 container's policy store. Check: after the image update applies, the serial log shows postgresql.service started, with no `nnp_transition` AVC.
