@@ -79,8 +79,10 @@ gcloud storage buckets describe "gs://$SEED_BUCKET" >/dev/null 2>&1 || \
         --uniform-bucket-level-access
 gcloud storage buckets add-iam-policy-binding "gs://$SEED_BUCKET" --member="serviceAccount:$service_account" --role=roles/storage.objectAdmin >/dev/null
 gcloud projects add-iam-policy-binding "$project" --member="serviceAccount:$service_account" --role="projects/$project/roles/$role_id" --condition=None >/dev/null
+# GitHub's sub claim can carry the owner and repository IDs, so GitHub supplies its prefix.
+sub_claim_prefix=$(gh api "repos/$GH_REPO/actions/oidc/customization/sub" --jq .sub_claim_prefix)
 gcloud iam service-accounts add-iam-policy-binding "$service_account" --role=roles/iam.workloadIdentityUser \
-    --member="principal://iam.googleapis.com/$pool/subject/repo:$GH_REPO:ref:refs/heads/main" >/dev/null
+    --member="principal://iam.googleapis.com/$pool/subject/$sub_claim_prefix:ref:refs/heads/main" >/dev/null
 printf '%s' "$pool/providers/$provider_id" | gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER
 printf '%s' "$service_account" | gh variable set GCP_SERVICE_ACCOUNT
 
