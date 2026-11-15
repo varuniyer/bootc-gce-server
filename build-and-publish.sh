@@ -5,7 +5,7 @@ IMAGE="$(jq -r '.transports.docker | keys[0]' containers/policy.json):latest"
 source "$PWD/build.env"
 
 # The runner ships no gcloud. apt checks Google's repository against the key this repo pins.
-install -D -m 0644 ci/google-cloud-apt.gpg /etc/apt/keyrings/google-cloud-apt.gpg
+install -D -m 0644 ci/google-cloud-apt.asc /etc/apt/keyrings/google-cloud-apt.asc
 cp ci/google-cloud-apt.sources /etc/apt/sources.list.d/
 apt-get update -q
 apt-get install -y -q google-cloud-cli
