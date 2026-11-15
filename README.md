@@ -10,7 +10,7 @@ Filesystem layout follows the conventions described in the [RHEL image mode docu
 
 The VM's OS is a container image. `Containerfile` and `setup.sh` define the whole OS, Podman builds it, and CI signs and publishes it like any other image. The image is ordinary RHEL with systemd units and shell scripts, so changing it takes no Nix expressions, and the VM pulls its own updates, so shipping a change takes no SSH-driven tool like Ansible.
 
-On RHEL bootc, the base image, every package, the Go toolchain, and the published image all carry signatures that the build or the VM checks. Red Hat signs the base image and the Go toolchain, each package repository signs its packages, and CI signs the published image (see [Base Image](#architecture) and [Signed Images](#architecture)). Fedora bootc cannot match that chain.
+On RHEL bootc, the base image, every package, the Go toolchain, and the published image all carry signatures that the build or the VM checks. Red Hat signs the base image and the Go toolchain, each package repository signs its packages, and CI signs the published image (see [Base Image](#architecture) and [Signed Images](#architecture)). Fedora bootc cannot match that chain, because Fedora publishes its bootc base images unsigned ([releng#10624](https://forge.fedoraproject.org/releng/tickets/issues/10624)).
 
 Nothing logs into the VM, so the running system changes only through a signed image update (see [Signed Images](#architecture) and [Automatic Updates](#architecture)) or an instance metadata change. Because `/etc` resets on every boot (see [Stateless Configuration](#architecture)), each boot reproduces what the image and instance metadata state.
 
